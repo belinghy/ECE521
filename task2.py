@@ -30,14 +30,12 @@ num_labels = 10
 num_h1_units = 1000
 batch_size = 128
 
-def accuracy(predictions, labels):
-	return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1)) / predictions.shape[0])
 
 # Making the model
 graph = tf.Graph()
 with graph.as_default():
-	tf_train_dataset = tf.placeholder(tf.float32, shape=(None, image_size * image_size))
- 	tf_train_labels = tf.placeholder(tf.float32, shape=(None, num_labels))
+	X = tf.placeholder(tf.float32, shape=(None, image_size * image_size))
+ 	Y = tf.placeholder(tf.float32, shape=(None, num_labels))
 
 	# between X and hidden
 	layer1_weights = tf.Variable(tf.truncated_normal([image_size * image_size, num_h1_units]))
@@ -47,40 +45,43 @@ with graph.as_default():
 	layer2_biases = tf.Variable(tf.zeros([num_labels]))
 
 	def model(data):
-		hidden = tf.nn.relu(tf.matmul(tf_train_dataset, layer1_weights) + layer1_biases)
+		hidden = tf.nn.relu(tf.matmul(X, layer1_weights) + layer1_biases)
 		return tf.matmul(hidden, layer2_weights) + layer2_biases
 
-	logits = model(tf_train_dataset)
+	logits = model(X)
 	train_prediction = tf.nn.softmax(logits)
-	# cross_entropy = -tf.reduce_sum(tf_train_labels * tf.log(train_prediction)) # Original cross entropy
-	cross_entropy = -tf.reduce_sum(tf_train_labels * tf.log(tf.clip_by_value(train_prediction, 1e-10, 1.0))) # Hacked cross_entropy to get no NaN
+	# cross_entropy = -tf.reduce_sum(Y * tf.log(train_prediction)) # Original cross entropy
+	cross_entropy = -tf.reduce_sum(Y * tf.log(tf.clip_by_value(train_prediction, 1e-10, 1.0))) # Hacked cross_entropy to get no NaN
 	loss = cross_entropy + tf.reduce_sum(tf.square(layer2_weights))
-	#loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf_train_labels))
+	#loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
 
 	# optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(cross_entropy) # no regularization
-	optimizer = tf.train.GradientDescentOptimizer(0.0005).minimize(loss) # Use loss to add regularization
+	optimizer = tf.train.GradientDescentOptimizer(0.001).minimize(loss) # Use loss to add regularization
 	
-	correct_prediction = tf.equal(tf.argmax(train_prediction, 1), tf.argmax(tf_train_labels, 1))
-	accuracy_ = 100.0 * tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+	correct_prediction = tf.equal(tf.argmax(train_prediction, 1), tf.argmax(Y, 1))
+	accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
 # Running the model
-for num_epochs in [10000]:
-	with tf.Session(graph=graph) as session:
-		tf.initialize_all_variables().run()
-		for step in range(num_epochs):
-			random_data_point = np.random.randint(training_set.shape[0], size=batch_size)
-			batch_data = training_set[random_data_point]
-			batch_labels = training_labels[random_data_point]
+with tf.Session(graph=graph) as session:
+	tf.initialize_all_variables().run()
+	for epoch in range(1000):
+		for i in range(150):
+			batch_data = training_set[i*100 : (i+1)*100]
+			batch_labels = training_labels[i*100 : (i+1)*100]
 
-			feed_dict = {tf_train_dataset : batch_data, tf_train_labels : batch_labels}
+			feed_dict = {X : batch_data, Y : batch_labels}
 
 			_, ce, predictions = session.run(
 			  [optimizer, cross_entropy, train_prediction], feed_dict=feed_dict)
-			
-			if (step % 100 == 0):
-				#print('{}'.format(l1w))
-				print('Minibatch cross_entropy at step %d: %f' % (step, ce))
-				print('Minibatch accuracy: %.1f%%' % accuracy_.eval(feed_dict))
-				print('Validation accuracy: %.1f%%' % accuracy_.eval({tf_train_dataset : validation_set, tf_train_labels : validation_labels}))
-				print('Test accuracy: %.1f%%' % accuracy_.eval({tf_train_dataset : testing_set, tf_train_labels : testing_labels}))
+
+		if epoch % 10 == 0:
+			cost_train, accuracy_train = session.run([cross_entropy, accuracy],
+				feed_dict={X: training_set, Y: training_labels})
+			cost_eval, accuracy_eval = session.run([cross_entropy, accuracy],
+				feed_dict={X: validation_set, Y: validation_labels})
+			errors_train = training_set.shape[0]*(1-accuracy_train)
+			errors_eval = validation_set.shape[0]*(1-accuracy_eval)
+			print ("Epoch:%04d, t_cost=%0.9f, t_acc=%0.4f, t_err=%0.4f, v_cost=%0.9f, v_acc=%0.4f, v_err=%0.4f" %
+				(epoch+1, cost_train, accuracy_train, errors_train, cost_eval, accuracy_eval, errors_eval))
+
