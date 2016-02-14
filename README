@@ -1,9 +1,0 @@
-Task 1
-1. Ran for settings in "task1_result_1.log"
-2. Noticed validation error is not going back up
-3. Realized that learning rate is too small (0.0001), with momentum 0.9
-4. Remembered that we should use highest learning rate such that the numbers converge
-5. Learning rate 0.001 converged
-6. Learning rate 0.01 did not converge
-7. Learning rate 0.005 did not converge
-8. Ran "task1_results.log" with (0.001, 0.9)
