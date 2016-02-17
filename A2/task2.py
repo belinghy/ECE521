@@ -43,20 +43,17 @@ def run_NN(file, learning_rate=0.001, momentum=0.0):
 		layer1_weights = tf.Variable(tf.truncated_normal([image_size * image_size, num_h1_units]))
 		layer1_biases = tf.Variable(tf.zeros([num_h1_units]))
 		# between hidden and output
-		layer2_weights = tf.Variable(tf.truncated_normal([num_h1_units, num_labels]))
+		layer2_weights = tf.Variable(tf.zeros([num_h1_units, num_labels]))
 		layer2_biases = tf.Variable(tf.zeros([num_labels]))
 
 		hidden = tf.nn.relu(tf.matmul(X, layer1_weights) + layer1_biases)
 		logits = tf.matmul(hidden, layer2_weights) + layer2_biases
 
 		train_prediction = tf.nn.softmax(logits)
-		cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
-		loss = cross_entropy + tf.reduce_sum(tf.square(layer2_weights))
-		#loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
+		cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
+		loss = cross_entropy
 
-		# optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(cross_entropy) # no regularization
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss) # Use loss to add regularization
-		#optimizer = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(loss)
+		optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss) # Use loss to add regularization
 
 		correct_prediction = tf.equal(tf.argmax(train_prediction, 1), tf.argmax(Y, 1))
 		accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -67,7 +64,7 @@ def run_NN(file, learning_rate=0.001, momentum=0.0):
 
 	with tf.Session(graph=graph) as session:
 		tf.initialize_all_variables().run()
-		for epoch in range(10000):
+		for epoch in range(1, 200):
 			for i in range(150):
 				batch_data = training_set[i*100 : (i+1)*100]
 				batch_labels = training_labels[i*100 : (i+1)*100]
@@ -77,7 +74,7 @@ def run_NN(file, learning_rate=0.001, momentum=0.0):
 				_, ce = session.run(
 				  [optimizer, cross_entropy], feed_dict=feed_dict)
 
-			if epoch % 10 == 0:
+			if epoch % 1 == 0:
 				cost_train, accuracy_train = session.run([cross_entropy, accuracy],
 					feed_dict={X: training_set, Y: training_labels})
 				cost_eval, accuracy_eval = session.run([cross_entropy, accuracy],
@@ -87,11 +84,11 @@ def run_NN(file, learning_rate=0.001, momentum=0.0):
 				errors_train = training_set.shape[0]*(1-accuracy_train)
 				errors_eval = validation_set.shape[0]*(1-accuracy_eval)
 				errors_test = testing_set.shape[0]*(1-accuracy_test)
-				print ("Epoch:%04d, t_cost=%0.9f, t_acc=%0.4f, t_err=%0.4f, v_cost=%0.9f, v_acc=%0.4f, v_err=%0.4f, te_acc=%0.4f, te_err=%0.4f " %
-					(epoch+1, cost_train, accuracy_train, errors_train, cost_eval, accuracy_eval, errors_eval, accuracy_test, errors_test), file=file)
+				print ("Epoch=%04d, t_cost=%0.9f, t_acc=%0.4f, t_err=%0.4f, v_cost=%0.9f, v_acc=%0.4f, v_err=%0.4f, te_acc=%0.4f, te_err=%0.4f " %
+					(epoch, cost_train, accuracy_train, errors_train, cost_eval, accuracy_eval, errors_eval, accuracy_test, errors_test), file=file)
 
 fout = open("task2_results.log", 'w', 0)
-for learning_rate in [0.01, 0.005, 0.001, 0.0005, 0.0001]:
+for learning_rate in [0.01, 0.001, 0.0001, 0.00005, 0.00001]:
 	#for momentum in [0.0, 0.5, 0.9]:
 	print ("Starting experiment with learning rate {}".format(learning_rate), file=fout)
 	run_NN(fout, learning_rate)

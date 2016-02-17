@@ -44,13 +44,13 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 		input_weights = tf.Variable(tf.truncated_normal([image_size * image_size, hidden_per_layer]))
 		input_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		if layers >= 2:
-			layer2_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, hidden_per_layer]))
+			layer2_weights = tf.Variable(tf.zeros([hidden_per_layer, hidden_per_layer]))
 			layer2_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		if layers >= 3:
-			layer3_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, hidden_per_layer]))
+			layer3_weights = tf.Variable(tf.zeros([hidden_per_layer, hidden_per_layer]))
 			layer3_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		# between hidden and output
-		output_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, num_labels]))
+		output_weights = tf.Variable(tf.zeros([hidden_per_layer, num_labels]))
 		output_biases = tf.Variable(tf.zeros([num_labels]))
 
 		hidden1 = tf.nn.relu(tf.matmul(X, input_weights) + input_biases)
@@ -73,17 +73,8 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 		cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
 		
 
-		loss = cross_entropy + 1e-4 * (tf.nn.l2_loss(input_weights) + tf.nn.l2_loss(input_biases) \
-						+ tf.nn.l2_loss(output_weights) + tf.nn.l2_loss(output_biases))
-		if layers >= 2:
-			loss += 1e-4 * (tf.nn.l2_loss(layer2_weights) + tf.nn.l2_loss(layer2_biases))
-		if layers >= 3:
-			loss += 1e-4 * (tf.nn.l2_loss(layer3_weights) + tf.nn.l2_loss(layer3_biases))
-		#loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, Y))
-
-		# optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(cross_entropy) # no regularization
+		loss = cross_entropy
 		optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss) # Use loss to add regularization
-		#optimizer = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(loss)
 
 		correct_prediction = tf.equal(tf.argmax(train_prediction, 1), tf.argmax(Y, 1))
 		accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -94,7 +85,7 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 
 	with tf.Session(graph=graph) as session:
 		tf.initialize_all_variables().run()
-		for epoch in range(2000):
+		for epoch in range(200):
 			for i in range(150):
 				batch_data = training_set[i*100 : (i+1)*100]
 				batch_labels = training_labels[i*100 : (i+1)*100]
@@ -104,7 +95,7 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 				_, ce = session.run(
 				  [optimizer, cross_entropy], feed_dict=feed_dict)
 
-			if epoch % 10 == 0:
+			if epoch % 1 == 0:
 				cost_train, accuracy_train = session.run([cross_entropy, accuracy],
 					feed_dict={X: training_set, Y: training_labels})
 				cost_eval, accuracy_eval = session.run([cross_entropy, accuracy],
