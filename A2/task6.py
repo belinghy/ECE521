@@ -54,17 +54,20 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 		output_biases = tf.Variable(tf.zeros([num_labels]))
 
 		hidden1 = tf.nn.relu(tf.matmul(X, input_weights) + input_biases)
+		hidden1 = tf.truediv(hidden1, hidden_per_layer.astype("float32"))
 		if dropout:
 			hidden1 = tf.nn.dropout(hidden1, 0.5)
 		logits = tf.matmul(hidden1, output_weights) + output_biases
 
 		if layers >= 2:
 			hidden2 = tf.nn.relu(tf.matmul(hidden1, layer2_weights) + layer2_biases)
+			hidden2 = tf.truediv(hidden2, hidden_per_layer.astype("float32"))
 			if dropout:
 				hidden2 = tf.nn.dropout(hidden2, 0.5)
 			logits = tf.matmul(hidden2, output_weights) + output_biases
 		if layers >= 3:
 			hidden3 = tf.nn.relu(tf.matmul(hidden2, layer3_weights) + layer3_biases)
+			hidden3 = tf.truediv(hidden3, hidden_per_layer.astype("float32"))
 			if dropout:
 				hidden3 = tf.nn.dropout(hidden3, 0.5)
 			logits = tf.matmul(hidden3, output_weights) + output_biases

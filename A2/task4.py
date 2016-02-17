@@ -44,14 +44,16 @@ def run_NN(file, num_h1_units=500, num_h2_units=500, learning_rate=0.01, momentu
 		layer1_weights = tf.Variable(tf.truncated_normal([image_size * image_size, num_h1_units]))
 		layer1_biases = tf.Variable(tf.zeros([num_h1_units]))
 		# between h1 and h2
-		layer2_weights = tf.Variable(tf.zeros([num_h1_units, num_h2_units]))
+		layer2_weights = tf.Variable(tf.truncated_normal([num_h1_units, num_h2_units]))
 		layer2_biases = tf.Variable(tf.zeros([num_h2_units]))
 		# between h2 and output
-		layer3_weights = tf.Variable(tf.zeros([num_h2_units, num_labels]))
+		layer3_weights = tf.Variable(tf.truncated_normal([num_h2_units, num_labels]))
 		layer3_biases = tf.Variable(tf.zeros([num_labels]))
 
 		h1 = tf.nn.relu(tf.matmul(X, layer1_weights) + layer1_biases)
+		h1 = tf.truediv(h1, 500.0)
 		h2 = tf.nn.relu(tf.matmul(h1, layer2_weights) + layer2_biases)
+		h2 = tf.truediv(h2, 500.0)
 		logits = tf.matmul(h2, layer3_weights) + layer3_biases
 
 		train_prediction = tf.nn.softmax(logits)
