@@ -44,13 +44,13 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 		input_weights = tf.Variable(tf.truncated_normal([image_size * image_size, hidden_per_layer]))
 		input_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		if layers >= 2:
-			layer2_weights = tf.Variable(tf.zeros([hidden_per_layer, hidden_per_layer]))
+			layer2_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, hidden_per_layer]))
 			layer2_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		if layers >= 3:
-			layer3_weights = tf.Variable(tf.zeros([hidden_per_layer, hidden_per_layer]))
+			layer3_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, hidden_per_layer]))
 			layer3_biases = tf.Variable(tf.zeros([hidden_per_layer]))
 		# between hidden and output
-		output_weights = tf.Variable(tf.zeros([hidden_per_layer, num_labels]))
+		output_weights = tf.Variable(tf.truncated_normal([hidden_per_layer, num_labels]))
 		output_biases = tf.Variable(tf.zeros([num_labels]))
 
 		hidden1 = tf.nn.relu(tf.matmul(X, input_weights) + input_biases)
@@ -74,7 +74,7 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 		
 
 		loss = cross_entropy
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss) # Use loss to add regularization
+		optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss) # Use loss to add regularization
 
 		correct_prediction = tf.equal(tf.argmax(train_prediction, 1), tf.argmax(Y, 1))
 		accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -106,14 +106,14 @@ def run_NN(file, layers=1, hidden_per_layer=1000, learning_rate=0.001, momentum=
 				errors_eval = validation_set.shape[0]*(1-accuracy_eval)
 				errors_test = testing_set.shape[0]*(1-accuracy_test)
 				print ("Epoch:%04d, t_cost=%0.9f, t_acc=%0.4f, t_err=%0.4f, v_cost=%0.9f, v_acc=%0.4f, v_err=%0.4f, te_acc=%0.4f, te_err=%0.4f " %
-					(epoch+1, cost_train, accuracy_train, errors_train, cost_eval, accuracy_eval, errors_eval, accuracy_test, errors_test), file=file)
+					(epoch, cost_train, accuracy_train, errors_train, cost_eval, accuracy_eval, errors_eval, accuracy_test, errors_test), file=file)
 
 fout = open("task6_results.log", 'w', 0)
 #fout = sys.stdout
 for i in range(5):
 	learning_rate = 10 ** np.random.uniform(-4, -2)
 	layers = np.random.randint(1, 4)
-	hidden_per_layer = np.random.choice([500, 1000])
+	hidden_per_layer = np.random.choice([100, 500])
 	dropout = np.random.choice([True, False])
 	print ("Starting experiment with learning rate {} layers {} num_hidden {} dropout {}".format(learning_rate, layers, hidden_per_layer, dropout), 
 			file=fout)
