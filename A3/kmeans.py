@@ -1,6 +1,7 @@
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
+import sys
 
 # load data
 data = np.load("data2D.npy")
@@ -8,6 +9,10 @@ print ("shape of input data: {}".format(data.shape))
 num_samples = data.shape[0]
 data_dimension = data.shape[1]
 
+# hold 1/3 of data for validation
+random_samples = np.random.choice(num_samples, num_samples/3, replace=False)
+validation_data = data[random_samples]
+train_data = data[np.setdiff1d(np.arange(num_samples), random_samples)]
 
 
 # Task 1.1.2
@@ -21,30 +26,32 @@ def euclidean_distance(samples, centroids):
 	return distances
 
 
-# Parameters
-k_clusters = 3
-learning_rate = 0.1
-beta1 = 0.9
-beta2 = 0.99
-epsilon = 1e-5
+def run_cluster(k_clusters, file=sys.stdout, learning_rate=0.1, beta1=0.9, beta2=0.99, epsilon=1e-5):
+	graph = tf.Graph()
+	with graph.as_default():
+		# Tensorflow placeholders and variables
+		input_data = tf.placeholder(tf.float32, shape=(None, data_dimension))
+		centroids = tf.Variable(tf.truncated_normal([k_clusters, data_dimension]))
 
-graph = tf.Graph()
-with graph.as_default():
-	# Tensorflow placeholders and variables
-	input_data = tf.placeholder(tf.float32, shape=(num_samples, data_dimension))
-	centroids = tf.Variable(tf.truncated_normal([k_clusters, data_dimension]))
+		# Add up all the distances
+		distances = euclidean_distance(input_data, centroids)
+		# nearest_clusters = tf.to_int32(tf.argmin(distances, 0))
+		min_distances = tf.reduce_min(distances, 0)
+		loss = tf.reduce_sum(min_distances)
+		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon).minimize(loss)
 
-	# Add up all the distances
-	distances = euclidean_distance(input_data, centroids)
-	# nearest_clusters = tf.to_int32(tf.argmin(distances, 0))
-	min_distances = tf.reduce_min(distances, 0)
-	loss = tf.reduce_sum(min_distances)
-	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon).minimize(loss)
+	with tf.Session(graph=graph) as session:
+		# initialize centroids
+		tf.initialize_all_variables().run()
+		for iteration in range(200):
+			_, loss_value = session.run([optimizer, loss], feed_dict={input_data: train_data})
+			print ("{:4d}, {:0.5f}".format(iteration+1, loss_value), file=file)
+		validation_loss = session.run(loss, feed_dict={input_data: validation_data})
+		print ("validation loss: {}".format(validation_loss), file=file)
 
-
-with tf.Session(graph=graph) as session:
-	# initialize centroids
-	tf.initialize_all_variables().run()
-	for iteration in range(500):
-		_, loss_value = session.run([optimizer, loss], feed_dict={input_data: data})
-		print (loss_value)
+fout = open("task1_3_results.log", 'w', 0)
+#fout = sys.stdout
+for k_cluster in [1, 2, 3, 4, 5]:
+	print ("Starting experiment with k_cluster = {}".format(k_cluster), file=fout)
+	run_cluster(k_clusters=k_cluster, file=fout, learning_rate=0.1)
+fout.close()
