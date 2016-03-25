@@ -10,6 +10,7 @@ num_samples = data.shape[0]
 data_dimension = data.shape[1]
 
 # hold 1/3 of data for validation
+rng = np.random.seed(700)
 random_samples = np.random.choice(num_samples, num_samples/3, replace=False)
 validation_data = data[random_samples]
 train_data = data[np.setdiff1d(np.arange(num_samples), random_samples)]
