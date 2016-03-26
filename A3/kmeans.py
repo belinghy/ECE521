@@ -50,16 +50,25 @@ def run_cluster(k_clusters, file=sys.stdout, learning_rate=0.1, beta1=0.9, beta2
 			print ("{:4d}, {:0.5f}".format(iteration+1, loss_value), file=file)
 		validation_loss = session.run(loss, feed_dict={input_data: validation_data})
 		print ("validation loss: {}".format(validation_loss), file=file)
-		centroid_values = centroids.eval()
-		# plt.scatter(train_data[:,0], train_data[:,1])
-		for centroid in centroid_values:
-			print (centroid, file=file)
-		#	plt.plot(centroid[0], centroid[1], markersize=35, marker="x", color='green', mew=10)
-		# plt.show()
 
-fout = open("task1_4_results.log", 'w', 0)
-#fout = sys.stdout
+		distance_values = distances.eval(feed_dict={input_data: train_data})
+		mins = np.argmin(distance_values, axis=0)
+		print (np.bincount(mins))
+
+		centroid_values = centroids.eval()
+		colour = plt.cm.rainbow(np.linspace(0,1, len(centroid_values)))
+
+		plt.scatter(train_data[:,0], train_data[:,1], c=colour[mins])
+		for i, centroid in enumerate(centroid_values):
+			plt.plot(centroid[0], centroid[1], markersize=35, marker="x", color='green', mew=10)
+			print (centroid, file=file)
+		plt.show()
+		
+		
+
+# fout = open("task1_4_results.log", 'w', 0)
+fout = sys.stdout
 for k_cluster in [1, 2, 3, 4, 5]:
 	print ("Starting experiment with k_cluster = {}".format(k_cluster), file=fout)
 	run_cluster(k_clusters=k_cluster, file=fout, learning_rate=0.1)
-fout.close()
+# fout.close()
