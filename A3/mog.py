@@ -6,7 +6,7 @@ from utils import *
 
 # laod data
 data = np.load("data100D.npy")
-data = np.load("data2D.npy")
+# data = np.load("data2D.npy")
 """
 data = np.random.multivariate_normal([0, 0], [[0.01,0], [0,0.01]], size=100)
 data = np.append(data, np.random.multivariate_normal([1, 1], [[0.01,0], [0,0.01]], size=100), 0)
@@ -41,7 +41,7 @@ def log_prob_pz_given_x(log_px_given_z, pis):
 	return log_marginal - denom, log_marginal, denom
 
 k_clusters = 3
-learning_rate=0.00001
+learning_rate=0.1
 beta1=0.9
 beta2=0.99
 epsilon=1e-5
@@ -59,7 +59,7 @@ with graph.as_default():
 	log_px_given_z, a, b = log_prob_px_given_z(input_data, means, variances)
 	marginal_pxz = tf.log(pis) + log_px_given_z
 	loss = -tf.reduce_sum(reduce_logsumexp(marginal_pxz))
-	optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.2).minimize(loss)
+	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon).minimize(loss)
 	# log_pz_given_x, c, d = log_prob_pz_given_x(log_px_given_z, pis)
 
 with tf.Session(graph=graph) as session:
