@@ -7,12 +7,10 @@ from utils import *
 # laod data
 data = np.load("data100D.npy")
 data = np.load("data2D.npy")
-"""
-data = np.array([[-1, -1],
-				 [0, 1],
-				 [1,-1],
-				 [0, 0]])
-"""
+data = np.random.multivariate_normal([0, 0], [[0.01,0], [0,0.01]], size=100)
+data = np.append(data, np.random.multivariate_normal([5, 5], [[0.01,0], [0,0.01]], size=100), 0)
+data = np.append(data, np.random.multivariate_normal([-5, -5], [[0.01,0], [0,0.01]], size=100), 0)
+
 print ("shape of input data: {}".format(data.shape))
 num_samples = data.shape[0]
 data_dimension = data.shape[1]
@@ -37,11 +35,11 @@ def log_prob_pz_given_x(log_px_given_z, pis):
 	# pis is the apriori probability of each cluster
 	marginal = pis * tf.exp(log_px_given_z)
 	log_marginal = tf.log(marginal)
-	denom_inv = tf.inv(reduce_logsumexp(log_marginal, reduction_indices=0, keep_dims=True))
-	return log_marginal - denom_inv, log_marginal, denom_inv
+	denom = reduce_logsumexp(log_marginal, reduction_indices=0, keep_dims=True)
+	return log_marginal - denom, log_marginal, denom
 
 k_clusters = 3
-learning_rate=0.000001
+learning_rate=0.0000001
 beta1=0.9
 beta2=0.99
 epsilon=1e-5
@@ -50,31 +48,34 @@ gaussian_norm_coef = 1 / np.sqrt(2*np.pi)
 graph = tf.Graph()
 with graph.as_default():
 	input_data = tf.placeholder(tf.float32, shape=(None, data_dimension))
-	pis = tf.Variable(tf.random_uniform([k_clusters, 1], minval=0, maxval=1, dtype=tf.float32))
-	pis = pis / tf.reduce_sum(pis)
+	pis_temp = tf.Variable(tf.random_uniform([k_clusters, 1], minval=0, maxval=1, dtype=tf.float32))
+	pis = tf.exp(logsoftmax(tf.log(pis_temp)))
 	means = tf.Variable(tf.truncated_normal([k_clusters, data_dimension]))
-	variances = tf.Variable(tf.truncated_normal([k_clusters, 1]))
-	variances = tf.exp(variances)
+	variances_temp = tf.Variable(tf.truncated_normal([k_clusters, 1]))
+	variances = tf.exp(variances_temp)
 	
 	log_px_given_z, a, b = log_prob_px_given_z(input_data, means, variances)
 	marginal_pxz = pis * tf.exp(log_px_given_z)
 	px = tf.reduce_sum(marginal_pxz, 0)
-	loss = -tf.reduce_sum(tf.log(px))
-	optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss)
+	loss = -reduce_logsumexp(tf.log(px))
+	optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 	# log_pz_given_x, c, d = log_prob_pz_given_x(log_px_given_z, pis)
 
 with tf.Session(graph=graph) as session:
 	tf.initialize_all_variables().run()
-	for iteration in range(200):
+	for iteration in range(10):
 		# log_px_given_z_value = session.run(log_px_given_z, feed_dict={input_data: data})
 		_, loss_value = session.run([optimizer, loss], feed_dict={input_data: data})
 		print ("{:4d}, {:0.5f}".format(iteration+1, loss_value))
-		print (pis.eval())
+		# print (np.exp(log_px_given_z.eval(feed_dict={input_data: data})))
+		# print (pis.eval(feed_dict={input_data: data}))
+		# print (px.eval(feed_dict={input_data: data}))
+
 	means_value = means.eval()
 	plt.scatter(data[:,0], data[:,1])
 	for mean in means_value:
-		print (mean)
-		plt.plot(mean[0], mean[1], markersize=35, marker="x", color='green', mew=10)
+		# print (mean)
+		plt.plot(mean[0], mean[1], markersize=35, marker="x", color="green", mew=10)
 	plt.show()
 
 	"""
