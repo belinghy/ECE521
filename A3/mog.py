@@ -5,17 +5,23 @@ import matplotlib.pyplot as plt
 from utils import *
 
 # laod data
-data = np.load("data100D.npy")
-# data = np.load("data2D.npy")
+# data = np.load("data100D.npy")
+data = np.load("data2D.npy")
+print ("shape of input data: {}".format(data.shape))
+num_samples = data.shape[0]
+data_dimension = data.shape[1]
+
+# hold 1/3 of data for validation
+rng = np.random.seed(700)
+random_samples = np.random.choice(num_samples, num_samples/3, replace=False)
+validation_data = data[random_samples]
+train_data = data[np.setdiff1d(np.arange(num_samples), random_samples)]
+
 """
 data = np.random.multivariate_normal([0, 0], [[0.01,0], [0,0.01]], size=100)
 data = np.append(data, np.random.multivariate_normal([1, 1], [[0.01,0], [0,0.01]], size=100), 0)
 data = np.append(data, np.random.multivariate_normal([-1, -1], [[0.01,0], [0,0.01]], size=100), 0)
 """
-
-print ("shape of input data: {}".format(data.shape))
-num_samples = data.shape[0]
-data_dimension = data.shape[1]
 
 sqrt_pi_inv = 1 / np.sqrt(np.pi)
 
@@ -40,7 +46,7 @@ def log_prob_pz_given_x(log_px_given_z, pis):
 	denom = reduce_logsumexp(log_marginal, reduction_indices=0, keep_dims=True)
 	return log_marginal - denom, log_marginal, denom
 
-k_clusters = 3
+k_clusters = 5
 learning_rate=0.1
 beta1=0.9
 beta2=0.99
@@ -65,34 +71,25 @@ with graph.as_default():
 with tf.Session(graph=graph) as session:
 	tf.initialize_all_variables().run()
 	for iteration in range(1000):
-		# log_px_given_z_value = session.run(log_px_given_z, feed_dict={input_data: data})
-		_, loss_value = session.run([optimizer, loss], feed_dict={input_data: data})
-		print ("{:4d}, {:0.5f}".format(iteration+1, loss_value))
-		# print (np.exp(log_px_given_z.eval(feed_dict={input_data: data})))
-		print (pis.eval(feed_dict={input_data: data}))
-		#print (marginal_pxz.eval(feed_dict={input_data: data}))
-		#print (px.eval(feed_dict={input_data: data}))
+		_, loss_value = session.run([optimizer, loss], feed_dict={input_data: train_data})
+		if iteration % 100 == 0:
+			print ("{:4d}, {:0.5f}".format(iteration+1, loss_value))
+
+	validation_loss = session.run(loss, feed_dict={input_data: validation_data})
+	print ("validation loss: {}".format(validation_loss))
+
+	prob_values = log_px_given_z.eval(feed_dict={input_data: validation_data})
+	mins = np.argmax(prob_values, axis=0)
+	print ("bincount: {}".format(np.bincount(mins)))
 
 	means_value = means.eval()
-	plt.scatter(data[:,0], data[:,1])
+	print ("means: \n{}".format(means_value))
+	colour = plt.cm.rainbow(np.linspace(0,1, k_clusters))
+	plt.scatter(validation_data[:,0], validation_data[:,1], c=colour[mins])
+
+	print ("variances: \n{}".format(variances.eval(feed_dict={input_data: train_data})))
+	print ("PIs: \n{}".format(pis.eval(feed_dict={input_data: train_data})))
+
 	for mean in means_value:
-		# print (mean)
 		plt.plot(mean[0], mean[1], markersize=35, marker="x", color="green", mew=10)
 	plt.show()
-
-	"""
-	log_pz_given_x_value = session.run(log_pz_given_x, feed_dict={input_data: data})
-
-	print (a.eval(feed_dict={input_data: data}))
-	print (b.eval(feed_dict={input_data: data}))
-	print ("\n\n")
-	# print (means.eval())
-	# print (variances.eval())
-	print (log_px_given_z_value)
-	print (pis.eval())
-	print ("\n\n")
-
-	print (log_pz_given_x_value)
-	print (c.eval(feed_dict={input_data: data}))
-	print (d.eval(feed_dict={input_data: data}))
-	"""
